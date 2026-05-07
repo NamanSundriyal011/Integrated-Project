@@ -1,182 +1,262 @@
 import streamlit as st
 import requests
-import re
 
-st.set_page_config(page_title="Construction AI", layout="wide")
+# =========================
+# PAGE CONFIG
+# =========================
+st.set_page_config(
+    page_title="Construction AI",
+    layout="wide"
+)
 
-# ---------- SIDEBAR ----------
-st.sidebar.title("🏗 Construction AI")
-st.sidebar.markdown("Plan Smarter. Build Better.")
-st.sidebar.markdown("---")
+# =========================
+# CUSTOM CSS
+# =========================
+st.markdown("""
+<style>
 
-# ---------- HEADER ----------
+body {
+    background-color: #050816;
+}
+
+.main {
+    background-color: #050816;
+    color: white;
+}
+
+section[data-testid="stSidebar"] {
+    background-color: #1e1f2b;
+    border-right: 1px solid #2f3242;
+}
+
+.sidebar-title {
+    font-size: 32px;
+    font-weight: bold;
+    color: white;
+}
+
+.card {
+    background: #0f172a;
+    padding: 18px;
+    border-radius: 14px;
+    margin-bottom: 15px;
+    border: 1px solid #1f2937;
+}
+
+.metric-card {
+    background: #111827;
+    padding: 20px;
+    border-radius: 16px;
+    text-align: center;
+    border: 1px solid #374151;
+}
+
+.phase-title {
+    font-size: 26px;
+    font-weight: bold;
+    margin-top: 25px;
+    margin-bottom: 10px;
+}
+
+.step-box {
+    background: #081226;
+    padding: 14px;
+    margin-bottom: 10px;
+    border-radius: 12px;
+    border-left: 4px solid #6366f1;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# =========================
+# SIDEBAR
+# =========================
+with st.sidebar:
+    st.markdown(
+        "<div class='sidebar-title'>🏗️ Construction AI</div>",
+        unsafe_allow_html=True
+    )
+
+    st.write("Plan Smarter. Build Better.")
+    st.divider()
+
+    st.markdown("### Dashboard")
+    st.markdown("### Projects")
+    st.markdown("### Reports")
+
+# =========================
+# MAIN TITLE
+# =========================
 st.title("Build Your Construction Plan")
 st.caption("AI-powered planning & reporting")
 
-goal = st.text_input("Enter Project Goal")
+# =========================
+# INPUT
+# =========================
+goal = st.text_input(
+    "Enter Project Goal",
+    placeholder="Build a Hospital with two floor parking and Garden"
+)
 
-# ---------- CLEAN FUNCTION ----------
-def clean_text(text):
-    text = re.sub(r"\*\*", "", text)
-    text = re.sub(r"\*", "", text)
-    text = re.sub(r"- ", "", text)
-    return text.strip()
+# =========================
+# DOCKER BACKEND URL
+# =========================
+API_URL = "http://backend:8000/generate"
 
-# ---------- SAFE METRICS ----------
-def extract_metrics(metrics_text):
-    result = {
-        "duration": "N/A",
-        "budget": "N/A",
-        "team": "N/A"
-    }
-
-    for line in metrics_text.split("\n"):
-        parts = line.split(":", 1)
-
-        if len(parts) < 2:
-            continue
-
-        key = parts[0].lower()
-        value = parts[1].strip()
-
-        if "duration" in key:
-            result["duration"] = value
-        elif "budget" in key:
-            result["budget"] = value
-        elif "team" in key:
-            result["team"] = value
-
-    return result   # ✅ returns dictionary (NO unpack issue)
-
-# ---------- BUTTON ----------
+# =========================
+# GENERATE BUTTON
+# =========================
 if st.button("🚀 Generate Plan"):
 
-    try:
-        res = requests.post(
-            "http://127.0.0.1:8000/generate",
-            json={"goal": goal}
-        ).json()
+    if not goal:
+        st.warning("Please enter a project goal")
 
-        if "error" in res:
-            st.error(res["error"])
-        else:
+    else:
+        try:
+            response = requests.post(
+                API_URL,
+                json={"goal": goal}
+            )
 
-            plan_text = clean_text(res["plan"])
-            report_text = clean_text(res["report"])
-            metrics_text = res.get("metrics", "")
+            data = response.json()
 
-            # ✅ NO unpacking now
-            metrics = extract_metrics(metrics_text)
+            plan = data.get("plan", "")
+            report = data.get("report", "")
+            metrics = data.get("metrics", {})
 
-            duration = metrics["duration"]
-            budget = metrics["budget"]
-            team = metrics["team"]
+            # =========================
+            # LAYOUT COLUMNS
+            # =========================
+            col1, col2 = st.columns([1.3, 1])
 
-            # ---------- STEP COUNT ----------
-            steps_list = [
-                s for s in plan_text.split("\n")
-                if s.strip() and len(s.strip()) < 150
-            ]
-            total_steps = len(steps_list)
-
-            col1, col2 = st.columns(2)
-
-            # ---------- TASK PLAN ----------
+            # =========================
+            # TASK PLAN
+            # =========================
             with col1:
-                st.subheader("📋 TASK PLAN")
 
+                st.markdown("## 📋 TASK PLAN")
+
+                phases = plan.split("Phase")
+
+                icons = ["📋", "🏗️", "⚙️", "🚀"]
+
+                for i, phase in enumerate(phases):
+
+                    phase = phase.strip()
+
+                    if not phase:
+                        continue
+
+                    lines = phase.split("\n")
+
+                    title = lines[0]
+
+                    st.markdown(
+                        f"""
+                        <div class='phase-title'>
+                            {icons[i % len(icons)]} Phase {title}
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+                    for step in lines[1:]:
+
+                        step = (
+                            step
+                            .replace("**", "")
+                            .replace("*", "")
+                        )
+
+                        if step.strip():
+
+                            st.markdown(
+                                f"""
+                                <div class='step-box'>
+                                    {step}
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
+
+                # DOWNLOAD BUTTON
                 st.download_button(
                     "⬇ Download Task Plan",
-                    data=plan_text,
+                    plan,
                     file_name="task_plan.txt"
                 )
 
-                phases = plan_text.split("Phase")
-                icons = ["📋", "🏗", "⚙️", "🚀"]
-
-                for i, phase in enumerate(phases):
-                    if phase.strip():
-
-                        lines = [
-                            clean_text(l)
-                            for l in phase.strip().split("\n")
-                            if l.strip()
-                        ]
-
-                        title = lines[0]
-
-                        st.markdown(f"### {icons[i % len(icons)]} Phase {title}")
-
-                        for step in lines[1:]:
-                            st.markdown(f"""
-                            <div style="
-                                background:#0f172a;
-                                padding:12px;
-                                margin:8px 0;
-                                border-radius:10px;
-                                border-left:4px solid #6366f1;
-                            ">
-                                {step}
-                            </div>
-                            """, unsafe_allow_html=True)
-
-            # ---------- REPORT ----------
+            # =========================
+            # SITE REPORT
+            # =========================
             with col2:
-                st.subheader("📄 SITE REPORT")
 
-                st.download_button(
-                    "⬇ Download Report",
-                    data=report_text,
-                    file_name="report.txt"
+                st.markdown("## 📄 SITE REPORT")
+
+                clean_report = (
+                    report
+                    .replace("**", "")
+                    .replace("*", "")
                 )
 
-                sections = report_text.split("\n\n")
+                st.markdown(
+                    f"""
+                    <div class='card'>
+                        <pre style='white-space: pre-wrap; color:white;'>
+{clean_report}
+                        </pre>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
-                for sec in sections:
-                    if sec.strip():
-                        st.markdown(f"""
-                        <div style="
-                            background:#0f172a;
-                            padding:16px;
-                            margin-bottom:10px;
-                            border-radius:12px;
-                            border:1px solid rgba(255,255,255,0.08);
-                        ">
-                            {sec}
-                        </div>
-                        """, unsafe_allow_html=True)
+                # DOWNLOAD REPORT
+                st.download_button(
+                    "⬇ Download Report",
+                    clean_report,
+                    file_name="construction_report.txt"
+                )
 
-            # ---------- CARDS ----------
-            st.markdown("###")
+            # =========================
+            # METRICS SECTION
+            # =========================
+            st.markdown("<br>", unsafe_allow_html=True)
 
-            c1, c2, c3, c4 = st.columns(4)
+            m1, m2, m3 = st.columns(3)
 
-            def card(title, value, color):
-                return f"""
-                <div style="
-                    background: rgba(30,41,59,0.8);
-                    padding:20px;
-                    border-radius:15px;
-                    text-align:center;
-                    border:1px solid rgba(255,255,255,0.1);
-                    box-shadow: 0 0 20px {color}33;
-                ">
-                    <div style="font-size:14px; color:#94a3b8;">{title}</div>
-                    <div style="font-size:22px; font-weight:600; color:white;">{value}</div>
-                </div>
-                """
+            with m1:
+                st.markdown(
+                    f"""
+                    <div class='metric-card'>
+                        <h4>Total Steps</h4>
+                        <h2>{metrics.get('steps', 'N/A')}</h2>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
-            with c1:
-                st.markdown(card("Total Steps", total_steps, "#3b82f6"), unsafe_allow_html=True)
+            with m2:
+                st.markdown(
+                    f"""
+                    <div class='metric-card'>
+                        <h4>Estimated Duration</h4>
+                        <h2>{metrics.get('duration', 'N/A')}</h2>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
-            with c2:
-                st.markdown(card("Est. Duration", duration, "#22c55e"), unsafe_allow_html=True)
+            with m3:
+                st.markdown(
+                    f"""
+                    <div class='metric-card'>
+                        <h4>Estimated Budget</h4>
+                        <h2>{metrics.get('budget', 'N/A')}</h2>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
-            with c3:
-                st.markdown(card("Est. Budget", budget, "#f97316"), unsafe_allow_html=True)
-
-            with c4:
-                st.markdown(card("Team Members", team, "#a855f7"), unsafe_allow_html=True)
-
-    except Exception as e:
-        st.error(str(e))
+        except Exception as e:
+            st.error(str(e))
