@@ -49,6 +49,7 @@ section[data-testid="stSidebar"] {
     border-radius: 16px;
     text-align: center;
     border: 1px solid #374151;
+    min-height: 180px;
 }
 
 .phase-title {
@@ -66,6 +67,12 @@ section[data-testid="stSidebar"] {
     border-left: 4px solid #6366f1;
 }
 
+pre {
+    white-space: pre-wrap;
+    color: white;
+    font-family: sans-serif;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -73,12 +80,18 @@ section[data-testid="stSidebar"] {
 # SIDEBAR
 # =========================
 with st.sidebar:
+
     st.markdown(
-        "<div class='sidebar-title'>🏗️ Construction AI</div>",
+        """
+        <div class='sidebar-title'>
+            🏗️ Construction AI
+        </div>
+        """,
         unsafe_allow_html=True
     )
 
     st.write("Plan Smarter. Build Better.")
+
     st.divider()
 
     st.markdown("### Dashboard")
@@ -86,9 +99,10 @@ with st.sidebar:
     st.markdown("### Reports")
 
 # =========================
-# MAIN TITLE
+# TITLE
 # =========================
 st.title("Build Your Construction Plan")
+
 st.caption("AI-powered planning & reporting")
 
 # =========================
@@ -100,7 +114,7 @@ goal = st.text_input(
 )
 
 # =========================
-# DOCKER BACKEND URL
+# BACKEND API URL
 # =========================
 API_URL = "http://backend:8000/generate"
 
@@ -110,10 +124,13 @@ API_URL = "http://backend:8000/generate"
 if st.button("🚀 Generate Plan"):
 
     if not goal:
+
         st.warning("Please enter a project goal")
 
     else:
+
         try:
+
             response = requests.post(
                 API_URL,
                 json={"goal": goal}
@@ -126,7 +143,7 @@ if st.button("🚀 Generate Plan"):
             metrics = data.get("metrics", {})
 
             # =========================
-            # LAYOUT COLUMNS
+            # MAIN COLUMNS
             # =========================
             col1, col2 = st.columns([1.3, 1])
 
@@ -150,7 +167,12 @@ if st.button("🚀 Generate Plan"):
 
                     lines = phase.split("\n")
 
-                    title = lines[0]
+                    title = (
+                        lines[0]
+                        .replace("*", "")
+                        .replace(":", "")
+                        .strip()
+                    )
 
                     st.markdown(
                         f"""
@@ -163,18 +185,18 @@ if st.button("🚀 Generate Plan"):
 
                     for step in lines[1:]:
 
-                        step = (
+                        clean_step = (
                             step
-                            .replace("**", "")
                             .replace("*", "")
+                            .strip()
                         )
 
-                        if step.strip():
+                        if clean_step:
 
                             st.markdown(
                                 f"""
                                 <div class='step-box'>
-                                    {step}
+                                    {clean_step}
                                 </div>
                                 """,
                                 unsafe_allow_html=True
@@ -203,7 +225,7 @@ if st.button("🚀 Generate Plan"):
                 st.markdown(
                     f"""
                     <div class='card'>
-                        <pre style='white-space: pre-wrap; color:white;'>
+                        <pre>
 {clean_report}
                         </pre>
                     </div>
@@ -225,7 +247,11 @@ if st.button("🚀 Generate Plan"):
 
             m1, m2, m3 = st.columns(3)
 
+            # =========================
+            # TOTAL STEPS
+            # =========================
             with m1:
+
                 st.markdown(
                     f"""
                     <div class='metric-card'>
@@ -236,27 +262,48 @@ if st.button("🚀 Generate Plan"):
                     unsafe_allow_html=True
                 )
 
+            # =========================
+            # ESTIMATED DURATION
+            # =========================
             with m2:
+
+                duration = (
+                    metrics
+                    .get("duration", "N/A")
+                    .replace("*", "")
+                )
+
                 st.markdown(
                     f"""
                     <div class='metric-card'>
                         <h4>Estimated Duration</h4>
-                        <h2>{metrics.get('duration', 'N/A')}</h2>
+                        <h2>{duration}</h2>
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
 
+            # =========================
+            # ESTIMATED BUDGET
+            # =========================
             with m3:
+
+                budget = (
+                    metrics
+                    .get("budget", "N/A")
+                    .replace("*", "")
+                )
+
                 st.markdown(
                     f"""
                     <div class='metric-card'>
                         <h4>Estimated Budget</h4>
-                        <h2>{metrics.get('budget', 'N/A')}</h2>
+                        <h2>{budget}</h2>
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
 
         except Exception as e:
+
             st.error(str(e))
