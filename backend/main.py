@@ -6,34 +6,54 @@ from generator import generate_report, generate_metrics
 
 app = FastAPI()
 
-class Request(BaseModel):
+# =========================
+# REQUEST MODEL
+# =========================
+class ProjectRequest(BaseModel):
     goal: str
 
-
-@app.get("/")
-def home():
-    return {"message": "Backend is working 🚀"}
-
-
+# =========================
+# GENERATE API
+# =========================
 @app.post("/generate")
-def generate(req: Request):
+def generate(data: ProjectRequest):
 
-    try:
-        plan = generate_plan(req.goal)
-        report = generate_report(req.goal)
-        metrics = generate_metrics(req.goal)
+    plan = generate_plan(data.goal)
 
-        return {
-            "goal": req.goal,
-            "plan": plan,
-            "report": report,
-            "metrics": metrics
-        }
+    report = generate_report(data.goal)
 
-    except Exception as e:
-        return {
-            "error": str(e)
-        }
+    metrics_text = generate_metrics(data.goal)
 
+    # =========================
+    # CONVERT METRICS STRING TO DICT
+    # =========================
+    metrics = {
+        "duration": "N/A",
+        "budget": "N/A",
+        "team": "N/A",
+        "steps": 0
+    }
 
-print("🔥 Backend starting...")
+    lines = metrics_text.split("\n")
+
+    for line in lines:
+
+        line = line.strip()
+
+        if "Duration:" in line:
+            metrics["duration"] = line.replace("Duration:", "").strip()
+
+        elif "Budget:" in line:
+            metrics["budget"] = line.replace("Budget:", "").strip()
+
+        elif "Team:" in line:
+            metrics["team"] = line.replace("Team:", "").strip()
+
+    # count total steps
+    metrics["steps"] = plan.count("-")
+
+    return {
+        "plan": plan,
+        "report": report,
+        "metrics": metrics
+    }
