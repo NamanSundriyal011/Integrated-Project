@@ -17,26 +17,50 @@ jobs:
 
     steps:
 
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      # =========================
+      # CHECKOUT REPOSITORY
+      # =========================
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.11"
+      # =========================
+      # SETUP PYTHON
+      # =========================
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-    - name: Install Backend Dependencies
-      run: |
-        cd backend
-        pip install -r requirements.txt
+      # =========================
+      # INSTALL BACKEND DEPENDENCIES
+      # =========================
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
 
-    - name: Install Frontend Dependencies
-      run: |
-        cd frontend
-        pip install -r requirements.txt
+      # =========================
+      # INSTALL FRONTEND DEPENDENCIES
+      # =========================
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          pip install -r requirements.txt
 
-    - name: Build Docker Containers
-      run: docker-compose build
+      # =========================
+      # SETUP DOCKER BUILDX
+      # =========================
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: CI Success
-      run: echo "CI Pipeline executed successfully!"
+      # =========================
+      # BUILD DOCKER CONTAINERS
+      # =========================
+      - name: Build Docker Containers
+        run: docker compose build
+
+      # =========================
+      # SUCCESS MESSAGE
+      # =========================
+      - name: CI Success
+        run: echo "CI/CD Pipeline executed successfully!"
